@@ -15,7 +15,7 @@ SCOPE = [
 
 st.set_page_config(page_title="PNANY Trick or Treat Event", page_icon="🎃", layout="centered")
 
-st.title("PNANY Membership Event")
+st.title("PNANY Trick or Treat Event")
 st.caption("Please complete the form below. All fields are required.")
 
 if "submissions" not in st.session_state:
@@ -150,5 +150,5 @@ if st.session_state["submissions"]:
 
 st.divider()
 st.markdown(
-    "Submissions are stored for this session and appended to a shared Google Sheet when configured via `st.secrets`."
+    "Thank you for participating!"
 )
