@@ -74,7 +74,7 @@ with st.form("pnany_signup", clear_on_submit=True):
     with col2:
         last_name = st.text_input("Last Name *")
         credentials = st.text_input("Credentials (e.g., RN, BSN) *")
-        education = st.text_input("Educational Level *")
+        education = st.text_input("Filipino/Non-Filipino *")
 
     birth_year = st.text_input("Birth Year (YYYY) *")
 
