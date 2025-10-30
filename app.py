@@ -4,7 +4,7 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="PNANY Membership Event", page_icon="🎃", layout="centered")
+st.set_page_config(page_title="PNANY Membership Event: 'Trick or Treat'", page_icon="🎃", layout="centered")
 
 st.title("PNANY Membership Event")
 st.caption("Please complete the form below. All fields are required.")
