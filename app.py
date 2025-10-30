@@ -4,7 +4,16 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
-st.set_page_config(page_title="PNANY Membership Event: 'Trick or Treat'", page_icon="🎃", layout="centered")
+# Google Sheets
+import gspread
+from google.oauth2.service_account import Credentials
+
+SCOPE = [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+]
+
+st.set_page_config(page_title="PNANY Trick or Treat Event", page_icon="🎃", layout="centered")
 
 st.title("PNANY Membership Event")
 st.caption("Please complete the form below. All fields are required.")
@@ -33,11 +42,44 @@ def valid_email(addr: str) -> bool:
     return re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", addr) is not None
 
 def valid_birth_year(year_str: str) -> bool:
-    """Check if birth year is a 4-digit number between 1900 and current year."""
     if not re.match(r"^\d{4}$", year_str.strip()):
         return False
     yr = int(year_str)
-    return 1900 <= yr <= 2025
+    from datetime import date
+    return 1900 <= yr <= date.today().year
+
+@st.cache_resource
+def _gsheet_client():
+    """Authorize using st.secrets['gcp_service_account'] (Service Account)."""
+    if "gcp_service_account" not in st.secrets:
+        raise RuntimeError("Missing gcp_service_account in st.secrets. Add your service account JSON in Secrets.")
+    creds = Credentials.from_service_account_info(st.secrets["gcp_service_account"], scopes=SCOPE)
+    return gspread.authorize(creds)
+
+def _open_worksheet():
+    # Prefer secrets; fallback to the provided Sheet ID and default worksheet 'Submissions'
+    spreadsheet_id = st.secrets.get("google_sheets", {}).get("spreadsheet_id", "1dnMua54Nyu7Mprz7exAwnW1rzaa86qxcE_GWZfFg94A")
+    ws_name = st.secrets.get("google_sheets", {}).get("worksheet_name", "Submissions")
+    gc = _gsheet_client()
+    ss = gc.open_by_key(spreadsheet_id)
+    try:
+        ws = ss.worksheet(ws_name)
+    except gspread.WorksheetNotFound:
+        ws = ss.add_worksheet(title=ws_name, rows=100, cols=20)
+    return ws
+
+def append_submission_to_gsheet(entry: dict):
+    ws = _open_worksheet()
+    header = ["timestamp","first_name","last_name","birth_year","email","credentials","education","institution"]
+    try:
+        current_header = ws.row_values(1)
+    except Exception:
+        current_header = []
+    if current_header != header:
+        ws.resize(rows=1)
+        ws.update("A1", [header])
+    row = [entry.get(k, "") for k in header]
+    ws.append_row(row, value_input_option="USER_ENTERED")
 
 def export_downloads(df: pd.DataFrame):
     csv_buf = io.StringIO()
@@ -72,7 +114,8 @@ if submitted:
     elif not valid_email(email):
         st.error("Please enter a valid email address.")
     elif not valid_birth_year(birth_year):
-        st.error(f"Please enter a valid birth year (1900–2025).")
+        from datetime import date
+        st.error(f"Please enter a valid birth year (1900–{date.today().year}).")
     else:
         entry = {
             "timestamp": datetime.now().isoformat(timespec="seconds"),
@@ -89,6 +132,14 @@ if submitted:
         st.success("Form submitted successfully!")
         st.image("assets/thank_you_halloween.png", caption="Thank you for your interest in PNANY!", use_column_width=True)
 
+        # Best-effort write to Google Sheet
+        try:
+            append_submission_to_gsheet(entry)
+            st.info("Submission saved to the shared Google Sheet.")
+        except Exception as e:
+            st.warning("Saved locally. Could not write to Google Sheet. Check Secrets and sharing.")
+            st.caption(f"Details (owner only): {e}")
+
 if st.session_state["submissions"]:
     st.subheader("Session submissions")
     df = pd.DataFrame(st.session_state["submissions"])
@@ -99,6 +150,5 @@ if st.session_state["submissions"]:
 
 st.divider()
 st.markdown(
-    "Need a shared destination for submissions (e.g., Google Sheet)? "
-    "Add it later by using `st.secrets` and the Google Sheets API."
+    "Submissions are stored for this session and appended to a shared Google Sheet when configured via `st.secrets`."
 )
