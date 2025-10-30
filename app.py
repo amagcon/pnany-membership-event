@@ -17,8 +17,8 @@ SCOPE = [
     "https://www.googleapis.com/auth/drive",
 ]
 
-st.set_page_config(page_title="PNANY Membership Event", page_icon="🎃", layout="centered")
-st.title("PNANY Membership Event")
+st.set_page_config(page_title="PNANY Event", page_icon="🎃", layout="centered")
+st.title("PNANY Event")
 st.caption("Please complete the form below. All fields are required.")
 
 # ====== HELPERS ======
@@ -53,7 +53,7 @@ def _open_worksheet():
 
 def append_submission_to_gsheet(entry: dict):
     ws = _open_worksheet()
-    header = ["timestamp", "first_name", "last_name", "birth_year", "email", "credentials", "education", "institution"]
+    header = ["timestamp", "first_name", "last_name", "birth_year", "email", "credentials", "ethnicity", "institution"]
     try:
         current_header = ws.row_values(1)
     except Exception:
@@ -64,7 +64,7 @@ def append_submission_to_gsheet(entry: dict):
     row = [entry.get(k, "") for k in header]
     ws.append_row(row, value_input_option="USER_ENTERED")
 
-# ====== FORM / STATE ======
+# ====== FORM ======
 with st.form("pnany_signup", clear_on_submit=True):
     col1, col2 = st.columns(2)
     with col1:
@@ -74,16 +74,17 @@ with st.form("pnany_signup", clear_on_submit=True):
     with col2:
         last_name = st.text_input("Last Name *")
         credentials = st.text_input("Credentials (e.g., RN, BSN) *")
-        education = st.text_input("Filipino/Non-Filipino *")
+        # Radio button for Filipino / Non-Filipino
+        ethnicity = st.radio("Ethnicity *", ["Filipino", "Non-Filipino"], horizontal=True)
 
     birth_year = st.text_input("Birth Year (YYYY) *")
 
     submitted = st.form_submit_button("Submit")
 
 if submitted:
-    required_fields = [first_name, last_name, institution, credentials, email, education, birth_year]
-    labels = ["First Name", "Last Name", "Institution / Facility", "Credentials", "Email", "Educational Level", "Birth Year"]
-    missing = [lbl for lbl, val in zip(labels, required_fields) if not val.strip()]
+    required_fields = [first_name, last_name, institution, credentials, email, ethnicity, birth_year]
+    labels = ["First Name", "Last Name", "Institution / Facility", "Credentials", "Email", "Ethnicity", "Birth Year"]
+    missing = [lbl for lbl, val in zip(labels, required_fields) if not val]
 
     if missing:
         st.error("Please fill in all required fields: " + ", ".join(missing))
@@ -99,7 +100,7 @@ if submitted:
             "birth_year": birth_year.strip(),
             "email": email.strip(),
             "credentials": credentials.strip(),
-            "education": education.strip(),
+            "ethnicity": ethnicity.strip(),
             "institution": institution.strip(),
         }
 
